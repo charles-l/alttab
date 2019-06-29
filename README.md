@@ -1,20 +1,12 @@
 <!-- This file is solely for github front page.
      For distribution, use doc/README instead. -->
-![Default options, raw X11](doc/screenshots/alttab-default-rawx.png?raw=true)
-
-![Low DPI](doc/screenshots/alttab-high.png?raw=true)
-
-![Translucent](doc/screenshots/alttab-jtaala.png?raw=true)
-
-[screenshot options](doc/screenshots/screenshots.md)
-
-[![chat on freenode](https://img.shields.io/badge/chat-on%20freenode-brightgreen.svg)](https://webchat.freenode.net/?channels=%23alttab)
+![Default options, raw X11](doc/screenshots/screenshot.png?raw=true)
 
 **alttab** is X11 window switcher designed for minimalistic window managers
 or standalone X11 session.
 ```
-  alttab  [-w N] [-d N] [-sc N] [-mk str] [-kk str] [-bk str] [-mm N] [-bm N] 
-  [-t NxM] [-i NxM] [-vp str] [-p str] [-s N] [-theme name] [-bg color] 
+  alttab  [-w N] [-d N] [-sc N] [-mk str] [-kk str] [-bk str] [-mm N] [-bm N]
+  [-t NxM] [-i NxM] [-vp str] [-p str] [-s N] [-theme name] [-bg color]
   [-fg color] [-frame color] [-font name] [-v|-vv]
 ```
 (see man page for details)
@@ -36,12 +28,12 @@ cd alttab
 See [INSTALL.md](INSTALL.md) for details and [doc/wm-setup.md](doc/wm-setup.md)
 for window manager settings.
 
-Usually it should run fully functional without any argument: `alttab`.  
+Usually it should run fully functional without any argument: `alttab`.
 
 # See also
 
-[no-wm](https://github.com/patrickhaller/no-wm): use X11 without a window manager  
-   
-   
+[no-wm](https://github.com/patrickhaller/no-wm): use X11 without a window manager
+ 
+ 
 alttab (C) Alexander Kulak &lt;sa-dev AT odd POINT systems&gt; 2016-2019
 
