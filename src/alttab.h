@@ -43,11 +43,11 @@ along with alttab.  If not, see <http://www.gnu.org/licenses/>.
 
 #define COLBG       0
 #define COLFG       1
-#define COLFRAME    2
+#define COLBGSELECTED    2
 #define NCOLORS     3
-#define DEFCOLBG    "black"
-#define DEFCOLFG    "grey"
-#define DEFCOLFRAME "#a0abab"
+#define DEFCOLBG    "#000000"
+#define DEFCOLFG    "white"
+#define DEFCOLSELECTED "#222222"
 
 #define XDEPTH      24          // TODO: get rid of this
 
@@ -176,7 +176,7 @@ typedef struct {
     unsigned int option_modMask, option_backMask;
     KeyCode option_modCode, option_keyCode;
     Color color[NCOLORS];
-    GC gcDirect, gcReverse, gcFrame;    // used in both gui.c and win.c
+    GC gcSelected, gcUnselected;    // used in both gui.c and win.c
     unsigned int ignored_modmask;
     icon_t *ic;                 // cache of all icons
     EwmhFeatures ewmh;          // guessed by ewmh_detectFeatures

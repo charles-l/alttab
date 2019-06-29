@@ -50,12 +50,8 @@ static int selNdx;                 // current (selected) item
 
 //
 // allocates GC
-// type is:
-//   0: normal
-//   1: for bg fill
-//   2: for drawing frame
 //
-static GC create_gc(int type)
+static GC create_gc(int bgi, int fgi)
 {
     GC gc;                      /* handle of newly created GC.  */
     unsigned long valuemask = 0;    /* which values in 'values' to  */
@@ -71,26 +67,9 @@ static GC create_gc(int type)
         return 0;
     }
     /* allocate foreground and background colors for this GC. */
-    switch (type) {
-    case 1:
-        XSetForeground(dpy, gc, g.color[COLBG].xcolor.pixel);
-        XSetBackground(dpy, gc, g.color[COLFG].xcolor.pixel);
-        XSetLineAttributes(dpy, gc, FRAME_W, line_style, cap_style, join_style);
-        break;
-    case 0:
-        XSetForeground(dpy, gc, g.color[COLFG].xcolor.pixel);
-        XSetBackground(dpy, gc, g.color[COLBG].xcolor.pixel);
-        XSetLineAttributes(dpy, gc, 1, line_style, cap_style, join_style);
-        break;
-    case 2:
-        XSetForeground(dpy, gc, g.color[COLFRAME].xcolor.pixel);
-        XSetBackground(dpy, gc, g.color[COLBG].xcolor.pixel);
-        XSetLineAttributes(dpy, gc, FRAME_W, line_style, cap_style, join_style);
-        break;
-    default:
-        msg(-1, "unknown GC type, not setting colors\n");
-        break;
-    }
+    XSetForeground(dpy, gc, g.color[fgi].xcolor.pixel);
+    XSetBackground(dpy, gc, g.color[bgi].xcolor.pixel);
+    XSetLineAttributes(dpy, gc, FRAME_W, line_style, cap_style, join_style);
     /* define the fill style for the GC. to be 'solid filling'. */
     XSetFillStyle(dpy, gc, FillSolid);
     return gc;
@@ -101,7 +80,7 @@ static GC create_gc(int type)
 //
 static void drawFr(GC gc, int f)
 {
-    int d = XDrawRectangle(dpy, uiwin, gc,
+    int d = XFillRectangle(dpy, uiwin, gc,
                            f * (tileW + FRAME_W) + (FRAME_W / 2),
                            0 + (FRAME_W / 2),
                            tileW + FRAME_W, tileH + FRAME_W);
@@ -117,13 +96,24 @@ static void framesRedraw()
 {
     int f;
     for (f = 0; f < g.maxNdx; f++) {
-        if (f == selNdx)
-            continue;           // skip
-        drawFr(g.gcReverse, f); // thick bg
-        drawFr(g.gcDirect, f);  // thin frame
+        drawFr(g.gcUnselected, f); // thick bg
     }
 // _after_ unselected draw selected, because they may overlap
-    drawFr(g.gcFrame, selNdx);
+    drawFr(g.gcSelected, selNdx);
+
+// icons
+    int j;
+    for (j = 0; j < g.maxNdx; j++) {
+        if (g.winlist[j].tile) {
+            msg(1, "copying tile %d to canvas\n", j);
+            //XSync (dpy, false);
+            int r = XCopyArea(dpy, g.winlist[j].tile, uiwin,
+                              g.gcUnselected, 0, 0, tileW, tileH,   // src
+                              j * (tileW + FRAME_W) + FRAME_W, FRAME_W);    // dst
+            //XSync (dpy, false);
+            msg(1, "XCopyArea returned %d\n", r);
+        }
+    }
 }
 
 //
@@ -148,7 +138,7 @@ static void prepareTile(WindowInfo * wi)
     wi->tile = XCreatePixmap(dpy, root, tileW, tileH, XDEPTH);
     if (!wi->tile)
         die("can't create tile");
-    int fr = XFillRectangle(dpy, wi->tile, g.gcReverse, 0, 0,
+    int fr = XFillRectangle(dpy, wi->tile, g.gcUnselected, 0, 0,
                             tileW, tileH);
     if (!fr) {
         msg(-1, "can't fill tile\n");
@@ -179,7 +169,7 @@ static void prepareTile(WindowInfo * wi)
                                wi->tile,
                                ic_gc, 0, 0,
                                wi->icon_w, wi->icon_h,  // src
-                               0, 0);   // dst
+                               tileW / 2 - wi->icon_w / 2, 5);   // dst
             if (!or) {
                 msg(-1, "can't copy icon to tile\n");
             }
@@ -197,21 +187,6 @@ static void prepareTile(WindowInfo * wi)
                 msg(-1, "can't scale icon to tile\n");
             }
         }
-    } else {
-        // draw placeholder or standalone icons from some WM
-        GC gcL = create_gc(0);  // GC for thin line
-        if (!gcL) {
-            msg(-1, "can't create gcL\n");
-        } else {
-            XSetLineAttributes(dpy, gcL, 1, LineSolid, CapButt, JoinMiter);
-            //XSetForeground (dpy, gcL, pixel);
-            int pr = XDrawRectangle(dpy, wi->tile, gcL,
-                                    0, 0, iconW, iconH);
-            if (!pr) {
-                msg(-1, "can't draw placeholder\n");
-            }
-            XFreeGC(dpy, gcL);
-        }
     }
  endIcon:
     // draw labels
@@ -219,8 +194,8 @@ static void prepareTile(WindowInfo * wi)
         int dr = drawMultiLine(wi->tile, fontLabel,
                                &(g.color[COLFG].xftcolor),
                                wi->name,
-                               0, (iconH + 5), tileW,
-                               (tileH - iconH - 5));
+                               5, (iconH + 5), tileW - 10,
+                               (tileH - iconH - 10));
         if (dr != 1) {
             msg(-1, "can't draw label\n");
         }
@@ -275,11 +250,11 @@ int startupGUItasks()
                                   colormap,
                                   g.color[p].name,
                                   &(g.color[p].xcolor), &(g.color[p].xcolor)))
-                die("failed to allocate X color: ", g.color[p].name);
+                die("failed to allocate X color: %s", g.color[p].name);
             if (!XftColorAllocName
                 (dpy, visual, colormap, g.color[p].name,
                  &(g.color[p].xftcolor)))
-                die("failed to allocate Xft color: ", g.color[p].name);
+                die("failed to allocate Xft color: %s", g.color[p].name);
         }
     }
 
@@ -294,9 +269,8 @@ int startupGUItasks()
 // having colors, GC may be built
 // they are required early for addWindow when transforming icon depth
     msg(0, "early building GCs\n");
-    g.gcDirect = create_gc(0);
-    g.gcReverse = create_gc(1);
-    g.gcFrame = create_gc(2);
+    g.gcUnselected = create_gc(COLBG, COLBG);
+    g.gcSelected = create_gc(COLBGSELECTED, COLBGSELECTED);
 
     return 1;
 }
@@ -472,7 +446,7 @@ int uiShow(bool direction)
     unsigned long valuemask = CWBackPixel | CWBorderPixel | CWOverrideRedirect;
     XSetWindowAttributes attributes;
     attributes.background_pixel = g.color[COLBG].xcolor.pixel;
-    attributes.border_pixel = g.color[COLFRAME].xcolor.pixel;
+    attributes.border_pixel = g.color[COLBGSELECTED].xcolor.pixel;
     attributes.override_redirect = 1;
     uiwin = XCreateWindow(dpy, root, uiwinX, uiwinY, uiwinW, uiwinH, 0, // border_width
                           CopyFromParent,   // depth
@@ -583,19 +557,6 @@ void uiExpose()
             // so just complain.
             msg(-1,
                 "switcher window resized, expect bugs. Please configure WM to not interfere with alttab window size, for example, disable 'floating_maximum_size' in i3\n");
-        }
-    }
-// icons
-    int j;
-    for (j = 0; j < g.maxNdx; j++) {
-        if (g.winlist[j].tile) {
-            msg(1, "copying tile %d to canvas\n", j);
-            //XSync (dpy, false);
-            int r = XCopyArea(dpy, g.winlist[j].tile, uiwin,
-                              g.gcDirect, 0, 0, tileW, tileH,   // src
-                              j * (tileW + FRAME_W) + FRAME_W, FRAME_W);    // dst
-            //XSync (dpy, false);
-            msg(1, "XCopyArea returned %d\n", r);
         }
     }
 // frame
@@ -737,10 +698,8 @@ void shutdownGUI(void)
 
     //XftFontClose(dpy, fontLabel); // actually, not needed
 
-    if (g.gcDirect)
-        XFreeGC(dpy, g.gcDirect);
-    if (g.gcReverse)
-        XFreeGC(dpy, g.gcReverse);
-    if (g.gcFrame)
-        XFreeGC (dpy, g.gcFrame);
+    if (g.gcUnselected)
+        XFreeGC(dpy, g.gcUnselected);
+    if (g.gcSelected)
+        XFreeGC (dpy, g.gcSelected);
 }

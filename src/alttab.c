@@ -397,8 +397,8 @@ static int use_args_and_xrm(int *argc, char **argv)
     g.color[COLBG].name = s ? s : DEFCOLBG;
     s = xresource_load_string(&db, XRMAPPNAME, "foreground");
     g.color[COLFG].name = s ? s : DEFCOLFG;
-    s = xresource_load_string(&db, XRMAPPNAME, "framecolor");
-    g.color[COLFRAME].name = s ? s : DEFCOLFRAME;
+    s = xresource_load_string(&db, XRMAPPNAME, "selected");
+    g.color[COLBGSELECTED].name = s ? s : DEFCOLSELECTED;
 
     s = xresource_load_string(&db, XRMAPPNAME, "font");
     if (s) {

@@ -458,7 +458,7 @@ int addWindowInfo(Window win, int reclevel, int wm_id, unsigned long desktop,
             die("can't create pixmap");
         // GC should be already prepared in uiShow
         if (!XCopyPlane
-            (dpy, g.winlist[g.maxNdx].icon_drawable, pswap, g.gcDirect,
+            (dpy, g.winlist[g.maxNdx].icon_drawable, pswap, g.gcSelected,
              0, 0, g.winlist[g.maxNdx].icon_w,
              g.winlist[g.maxNdx].icon_h, 0, 0, 1))
             die("can't copy plane");    // plane #1?
